@@ -10,6 +10,7 @@ A responsive oncology signal dashboard built for Vercel. It reads the Cure Cance
 - Source totals, latest signal rows, clinical-trial watch, approval shelf, refresh health, and API budget status
 - Source links for PubMed, FDA, ClinicalTrials.gov, and Cure Cancer With AI records
 - A safe preview mode when no API key is configured
+- Dark observatory UI with clickable source tiles, a seven-day visible-sample pulse chart, connected source map, trial table, approval shelf, animated scan/pulse details, and record detail drawer
 
 The dashboard is informational only and is not medical advice.
 
