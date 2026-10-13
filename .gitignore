@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+.vercel/
+*.log
+.env*
+!.env.example
+*.tsbuildinfo
+
+# Supplied source text contains a credential and must not be published.
+Cure_Cancer_With_AI.txt
+
+# Local OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
