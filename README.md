@@ -15,7 +15,7 @@ The dashboard is informational only and is not medical advice.
 
 ## Requirements
 
-- Node.js `20.9.0` (the version is pinned in `.nvmrc` and `package.json`)
+- Node.js `24.x` (the deployment engine is declared in `package.json`; local and Docker builds use the pinned `24.0.0` runtime)
 - npm `10.1.x` (the package manager is recorded in `package.json`)
 - Docker 24+ only if you want to use the container workflow
 
@@ -82,7 +82,7 @@ Run it with the API key supplied only at runtime:
 docker run --rm -p 3000:3000 --env-file .env.local cure-cancer-ai-dashboard
 ```
 
-Open <http://localhost:3000>. The Dockerfile uses the pinned Node 20.9.0 runtime and Next.js standalone output. `.dockerignore` excludes local dependencies, build output, Git metadata, and environment files from the build context.
+Open <http://localhost:3000>. The Dockerfile uses the pinned Node 24.0.0 runtime and Next.js standalone output. `.dockerignore` excludes local dependencies, build output, Git metadata, and environment files from the build context.
 
 ## Vercel deployment
 
