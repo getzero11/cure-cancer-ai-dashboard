@@ -9,6 +9,7 @@ out/
 
 # Supplied source text contains a credential and must not be published.
 Cure_Cancer_With_AI.txt
+Cure_Cancer_With_AI.md
 
 # Local OS/editor files
 .DS_Store

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { asNumber, parseDatasetBody } from "@/lib/dashboard-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -88,18 +89,6 @@ class DatasetFetchError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is ApiRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function asNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
 function normalizeCancerType(value: string | null): CancerType {
   return CANCER_TYPES.includes(value as CancerType) ? (value as CancerType) : "all";
 }
@@ -185,11 +174,7 @@ async function fetchDataset(
     }
 
     const body: unknown = await response.json();
-    const parsed = isRecord(body) ? body : {};
-    const rawItems = Array.isArray(parsed.data) ? parsed.data : [];
-    const items = rawItems.filter(isRecord);
-    const pagination = isRecord(parsed.pagination) ? parsed.pagination : {};
-    const total = asNumber(pagination.total) ?? items.length;
+    const { items, total } = parseDatasetBody(body, config.key);
 
     return {
       items,
@@ -201,7 +186,7 @@ async function fetchDataset(
     if (error instanceof DatasetFetchError) {
       throw error;
     }
-    if (error instanceof DOMException && error.name === "AbortError") {
+    if (error instanceof Error && error.name === "AbortError") {
       throw new DatasetFetchError("The source timed out after 20 seconds.", 504);
     }
     throw new DatasetFetchError("The source could not be reached.", 503);
@@ -419,10 +404,14 @@ export async function GET(request: NextRequest) {
     errors,
   };
 
-  liveDashboardCache.set(cacheKey, {
-    payload,
-    expiresAt: Date.now() + LIVE_CACHE_TTL_MS,
-  });
+  // Never keep a partial/error snapshot for five minutes. A transient failure
+  // should be retried on the next request instead of looking like empty data.
+  if (mode === "live") {
+    liveDashboardCache.set(cacheKey, {
+      payload,
+      expiresAt: Date.now() + LIVE_CACHE_TTL_MS,
+    });
+  }
 
   return NextResponse.json(payload, {
     headers: {

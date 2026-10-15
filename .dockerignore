@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+.git/
+.vercel/
+*.log
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+Cure_Cancer_With_AI.txt
+Cure_Cancer_With_AI.md
