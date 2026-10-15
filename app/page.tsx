@@ -237,8 +237,8 @@ function PulseChart({ payload, focusKey, onFocus }: { payload: DashboardPayload 
   return (
     <div className="pulse-chart-wrap">
       <div className="chart-switcher" role="tablist" aria-label="Chart source">
-        <button className={focusKey === "all" ? "active" : ""} onClick={() => onFocus("all")} type="button">All signal lanes</button>
-        {DATASETS.slice(0, 3).map((dataset) => <button className={focusKey === dataset.key ? `active ${dataset.color}` : ""} onClick={() => onFocus(dataset.key)} key={dataset.key} type="button">{dataset.short}</button>)}
+        <button aria-selected={focusKey === "all"} className={focusKey === "all" ? "active" : ""} onClick={() => onFocus("all")} role="tab" type="button">All signal lanes</button>
+        {DATASETS.slice(0, 3).map((dataset) => <button aria-selected={focusKey === dataset.key} className={focusKey === dataset.key ? `active ${dataset.color}` : ""} onClick={() => onFocus(dataset.key)} key={dataset.key} role="tab" type="button">{dataset.short}</button>)}
       </div>
       <svg className="pulse-chart" viewBox="0 0 200 140" role="img" aria-label="Seven day visible sample activity chart">
         <defs><linearGradient id="pulse-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#8b7cff" stopOpacity=".36" /><stop offset="1" stopColor="#8b7cff" stopOpacity="0" /></linearGradient></defs>
@@ -248,6 +248,9 @@ function PulseChart({ payload, focusKey, onFocus }: { payload: DashboardPayload 
         {coords.map((point) => <g key={point.date.toISOString()}><circle cx={point.x} cy={point.y} r="3.4" className="pulse-point"><title>{point.count} visible records on {formatDate(point.date)}</title></circle></g>)}
         {coords.map((point) => <text key={`label-${point.date.toISOString()}`} x={point.x} y="138" textAnchor="middle" className="chart-date">{new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(point.date).slice(0, 2)}</text>)}
       </svg>
+      <div className="chart-values" aria-label="Visible activity counts by day">
+        {points.map((point) => <span key={`value-${point.date.toISOString()}`}><strong>{point.count}</strong><small>{new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(point.date)}</small></span>)}
+      </div>
       <div className="chart-foot"><span><i className="legend-spark" /> visible sample activity</span><span>7 days · hover points</span></div>
     </div>
   );
@@ -269,7 +272,7 @@ function NetworkDiagram({ payload, onSelect }: { payload: DashboardPayload | nul
         <g className="network-links">{nodes.map((node) => <line key={node.key} x1="164" y1="91" x2={node.x} y2={node.y} />)}</g>
         <circle cx="164" cy="91" r="28" className="network-core" />
         <text x="164" y="88" textAnchor="middle" className="network-core-text">CCWAI</text><text x="164" y="102" textAnchor="middle" className="network-core-sub">LIVE GRAPH</text>
-        {nodes.map((node) => <g key={node.key} className="network-node" onClick={() => onSelect(node.key)} tabIndex={0} role="button" aria-label={`Open ${node.label} details`}><circle cx={node.x} cy={node.y} r="17" className={`network-node-${sourceMeta(node.key).color}`} /><text x={node.x} y={node.y + 3} textAnchor="middle" className="network-node-label">{node.label.slice(0, 2).toUpperCase()}</text><text x={node.x} y={node.y + 31} textAnchor="middle" className="network-node-count">{numberFormat(node.value)}</text></g>)}
+        {nodes.map((node) => <g key={node.key} className="network-node" onClick={() => onSelect(node.key)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(node.key); } }} tabIndex={0} role="button" aria-label={`Open ${node.label} details`}><circle cx={node.x} cy={node.y} r="17" className={`network-node-${sourceMeta(node.key).color}`} /><text x={node.x} y={node.y + 3} textAnchor="middle" className="network-node-label">{node.label.slice(0, 2).toUpperCase()}</text><text x={node.x} y={node.y + 31} textAnchor="middle" className="network-node-count">{numberFormat(node.value)}</text></g>)}
       </svg>
       <p>Every node is clickable. Explore the source lane behind each count.</p>
     </div>
