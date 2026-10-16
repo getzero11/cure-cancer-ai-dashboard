@@ -16,16 +16,32 @@ The dashboard is informational only and is not medical advice.
 
 ## Requirements
 
-- Node.js `24.x` (the deployment engine is declared in `package.json`; local and Docker builds use the pinned `24.0.0` runtime)
-- npm `10.1.x` (the package manager is recorded in `package.json`)
+- Node.js `24.0.0` (the version is pinned in `.nvmrc`, `package.json`, and Docker)
+- npm `10.1.0` (the version is recorded in `package.json` and enforced in the Docker build)
 - Docker 24+ only if you want to use the container workflow
 
 ## Setup
+
+On Linux or macOS, select the pinned Node version with your version manager before installing:
+
+```bash
+nvm install "$(cat .nvmrc)"
+nvm use "$(cat .nvmrc)"
+node --version  # v24.0.0
+npm --version   # 10.1.0
+```
 
 Install exactly from the committed npm lockfile:
 
 ```bash
 npm ci
+```
+
+If the selected Node distribution includes a different npm patch release, use the
+same version without installing anything globally:
+
+```bash
+npx --yes npm@10.1.0 ci
 ```
 
 Create a local environment file. On macOS/Linux:
@@ -67,7 +83,7 @@ Run the single reproducible validation command:
 npm test
 ```
 
-This runs the TypeScript check and a production Next.js build. The build also verifies the standalone output used by Docker. The clinical-trials route accepts the documented `data` response shape and the compatible `items`/nested-items shape, normalizes common registry field names, falls back to live ClinicalTrials.gov records when CCWAI returns a successful empty trial lane, surfaces source errors in the trial panel, and does not cache partial/error snapshots.
+This single command runs four checks: local dashboard-data assertions, the TypeScript check, a production Next.js build, and an HTTP smoke test against the built app in preview mode. It does not call CCWAI or ClinicalTrials.gov after dependencies are installed, so it is repeatable offline; `npm ci` and `docker build` still need a package/image cache or registry access on a completely empty machine. The clinical-trials route accepts the documented `data` response shape and the compatible `items`/nested-items shape, normalizes common registry field names, falls back to live ClinicalTrials.gov records when CCWAI returns a successful empty trial lane, surfaces source errors in the trial panel, and does not cache partial/error snapshots.
 
 ## Docker
 

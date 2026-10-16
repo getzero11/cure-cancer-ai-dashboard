@@ -1,12 +1,20 @@
-FROM node:24.0.0-bookworm-slim AS deps
+FROM node:24.0.0-bookworm-slim AS base
+
+# Keep the package manager reproducible inside the build image too. This is a
+# container-local install, not a host-global dependency.
+RUN npm install --global npm@10.1.0 \
+  && test "$(node --version)" = "v24.0.0" \
+  && test "$(npm --version)" = "10.1.0"
 
 WORKDIR /app
+
+FROM base AS deps
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:24.0.0-bookworm-slim AS builder
+FROM deps AS builder
 
-WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
