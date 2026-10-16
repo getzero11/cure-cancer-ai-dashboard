@@ -759,6 +759,7 @@ body {
 .chart-switcher button.active.coral { border-color: var(--coral); background: #fcebe7; color: var(--coral); }
 .chart-switcher button.active.amber { border-color: var(--amber); background: #fff6d9; color: var(--amber); }
 .pulse-chart { height: 210px; }
+.pulse-loading { display: grid; min-height: 286px; place-items: center; color: var(--faint); font-family: var(--mono); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; }
 .chart-gridline { stroke: rgba(48, 84, 105, .14); }
 .pulse-line { stroke: var(--violet); filter: drop-shadow(0 2px 4px rgba(90, 74, 166, .22)); }
 .pulse-point { fill: #fff; stroke: var(--violet); }

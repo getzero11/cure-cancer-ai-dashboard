@@ -243,6 +243,9 @@ function pulsePoints(payload: DashboardPayload | null, focusKey: DatasetKey | "a
 }
 
 function PulseChart({ payload, focusKey, onFocus }: { payload: DashboardPayload | null; focusKey: DatasetKey | "all"; onFocus: (key: DatasetKey | "all") => void }) {
+  if (!payload) {
+    return <div className="pulse-chart-wrap"><div className="pulse-loading" role="status">Loading activity sample…</div></div>;
+  }
   const points = pulsePoints(payload, focusKey);
   const max = Math.max(...points.map((point) => point.count), 1);
   const coords = points.map((point, index) => ({
