@@ -108,7 +108,7 @@ function numberFormat(value: number, compact = true) {
 }
 
 function dateValue(value: unknown) {
-  const raw = valueOf(value);
+  const raw = value instanceof Date ? value.toISOString() : valueOf(value);
   if (!raw) return "";
   const date = new Date(raw);
   return Number.isNaN(date.getTime()) ? "" : date.toISOString();
