@@ -217,7 +217,17 @@ function buildRegistryQuery(cancerType: CancerType, query: string): string {
     sort: "LastUpdatePostDate:desc",
   });
 
-  params.set("query.cond", cancerType === "all" ? "cancer" : `${cancerType} cancer`);
+  // ClinicalTrials.gov tokenizes unquoted multi-word condition queries as OR
+  // terms. Phrase the common "... cancer" filters so a lung view does not
+  // surface unrelated studies that merely contain the word "cancer".
+  const phraseCancerTypes = new Set(["lung", "breast", "prostate", "colorectal"]);
+  const condition =
+    cancerType === "all"
+      ? "cancer"
+      : phraseCancerTypes.has(cancerType)
+        ? `"${cancerType} cancer"`
+        : `"${cancerType}"`;
+  params.set("query.cond", condition);
   if (query) params.set("query.term", query);
 
   return `${REGISTRY_API_ORIGIN}?${params.toString()}`;
