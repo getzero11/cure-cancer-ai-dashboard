@@ -40,11 +40,15 @@ try {
 
   const payload = await response.json();
   const trials = payload?.datasets?.clinicalTrials;
+  const research = payload?.datasets?.research;
   assert.equal(payload.mode, "demo");
   assert.ok(Array.isArray(trials?.items), "clinical-trials items must be an array");
   assert.ok(trials.items.length > 0, "preview response must include trial rows");
   assert.ok(trials.items[0].nctId, "trial rows must include an NCT identifier");
-  console.log("Dashboard smoke test passed: clinical-trials rows are available.");
+  assert.ok(Array.isArray(research?.items), "research items must be an array");
+  assert.ok(research.items.length >= 4, "preview response must include dated research activity");
+  assert.ok(new Set(research.items.map((item) => item.publicationDate?.slice(0, 10))).size >= 4, "preview research activity must span multiple days");
+  console.log("Dashboard smoke test passed: clinical-trials rows and research activity are available.");
 } finally {
   stopServer();
 }

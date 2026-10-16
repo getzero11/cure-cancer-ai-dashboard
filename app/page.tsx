@@ -208,15 +208,27 @@ function emptyDataset(): DatasetResult {
   return { items: [], total: 0, fetchedAt: "" };
 }
 
+function latestRecordDate(payload: DashboardPayload | null, keys: DatasetKey[]) {
+  let latest = 0;
+  keys.forEach((key) => {
+    itemsFor(payload, key).forEach((item) => {
+      const raw = recordDate(item, key);
+      const timestamp = raw ? new Date(raw).getTime() : NaN;
+      if (Number.isFinite(timestamp)) latest = Math.max(latest, timestamp);
+    });
+  });
+  return latest ? new Date(latest) : null;
+}
+
 function pulsePoints(payload: DashboardPayload | null, focusKey: DatasetKey | "all") {
-  const today = new Date();
+  const keys = focusKey === "all" ? DATASETS.map((dataset) => dataset.key) : [focusKey];
+  const anchor = latestRecordDate(payload, keys) ?? new Date();
+  anchor.setHours(0, 0, 0, 0);
   const buckets = Array.from({ length: 7 }, (_, index) => {
-    const day = new Date(today);
-    day.setHours(0, 0, 0, 0);
+    const day = new Date(anchor);
     day.setDate(day.getDate() - (6 - index));
     return { date: day, count: 0 };
   });
-  const keys = focusKey === "all" ? DATASETS.map((dataset) => dataset.key) : [focusKey];
   keys.forEach((key) => {
     itemsFor(payload, key).forEach((item) => {
       const raw = recordDate(item, key);
@@ -245,7 +257,7 @@ function PulseChart({ payload, focusKey, onFocus }: { payload: DashboardPayload 
         <button aria-selected={focusKey === "all"} className={focusKey === "all" ? "active" : ""} onClick={() => onFocus("all")} role="tab" type="button">All signal lanes</button>
         {DATASETS.slice(0, 3).map((dataset) => <button aria-selected={focusKey === dataset.key} className={focusKey === dataset.key ? `active ${dataset.color}` : ""} onClick={() => onFocus(dataset.key)} key={dataset.key} role="tab" type="button">{dataset.short}</button>)}
       </div>
-      <svg className="pulse-chart" viewBox="0 0 200 140" role="img" aria-label="Seven day visible sample activity chart">
+       <svg className="pulse-chart" viewBox="0 0 200 140" role="img" aria-label="Seven day latest-sample activity chart">
         <defs><linearGradient id="pulse-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#8b7cff" stopOpacity=".36" /><stop offset="1" stopColor="#8b7cff" stopOpacity="0" /></linearGradient></defs>
         {[31, 62, 93, 124].map((y) => <line key={y} x1="14" x2="186" y1={y} y2={y} className="chart-gridline" />)}
         <polygon points={area} fill="url(#pulse-fill)" />
@@ -256,7 +268,7 @@ function PulseChart({ payload, focusKey, onFocus }: { payload: DashboardPayload 
       <div className="chart-values" aria-label="Visible activity counts by day">
         {points.map((point) => <span key={`value-${point.date.toISOString()}`}><strong>{point.count}</strong><small>{new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(point.date)}</small></span>)}
       </div>
-      <div className="chart-foot"><span><i className="legend-spark" /> visible sample activity</span><span>7 days · hover points</span></div>
+       <div className="chart-foot"><span><i className="legend-spark" /> visible sample activity</span><span>latest sample · 7 days</span></div>
     </div>
   );
 }
@@ -416,14 +428,14 @@ export default function Home() {
         <div className="hero-visual"><div className="hero-visual-label"><span>FIELD MAP</span><b>{selectedCancer.label.toUpperCase()}</b></div><NetworkDiagram payload={payload} onSelect={openFirstRecord} /><div className="scan-line" /></div>
       </section>
 
-      <section className="new-filter-bar" aria-label="Dashboard filters"><div className="filter-title"><span>TRACKING</span><strong>{selectedCancer.label}</strong></div><div className="cancer-pills" role="tablist" aria-label="Cancer type">{CANCERS.map((cancer) => <button key={cancer.value} type="button" role="tab" aria-selected={cancer.value === cancerType} className={cancer.value === cancerType ? "selected" : ""} onClick={() => setCancerType(cancer.value)}><b>{cancer.symbol}</b>{cancer.label}</button>)}</div><form className="new-search" onSubmit={submitSearch}><Icon name="search" size={16} /><input value={draftQuery} onChange={(event) => setDraftQuery(event.target.value)} placeholder="Search the live board" aria-label="Search the live board" /><button type="submit">Find</button></form></section>
+       <section className="new-filter-bar" aria-label="Dashboard filters"><div className="filter-title"><span>TRACKING</span><strong>{selectedCancer.label}</strong></div><div className="cancer-pills" role="tablist" aria-label="Cancer type">{CANCERS.map((cancer) => <button key={cancer.value} type="button" role="tab" aria-selected={cancer.value === cancerType} className={cancer.value === cancerType ? "selected" : ""} onClick={() => setCancerType(cancer.value)}><b>{cancer.symbol}</b>{cancer.label}</button>)}</div><form className="new-search" onSubmit={submitSearch} aria-label="Search the live board"><label className="sr-only" htmlFor="board-search">Search the live board</label><input id="board-search" value={draftQuery} onChange={(event) => setDraftQuery(event.target.value)} aria-label="Search the live board" /><button type="submit" aria-label="Run search"><Icon name="search" size={17} /></button></form></section>
 
        {payload?.notice ? <div className="new-notice"><span className="notice-mark">◌</span><span>{payload.notice}</span>{payload.mode === "demo" ? <a href="https://www.curecancerwithai.com/api-keys" target="_blank" rel="noreferrer">Enable live source <Icon name="external" size={14} /></a> : null}</div> : null}
       {error ? <div className="new-error" role="alert"><strong>Source request failed.</strong> {error}<button onClick={() => void loadDashboard()} type="button">Try again</button></div> : null}
 
       <section className="board-section" id="overview"><div className="section-topline"><div><span className="new-kicker"><i /> At a glance</span><h2>Read the room.</h2></div><div className="section-top-actions"><span className={`source-status ${payload?.mode ?? "loading"}`}><i />{health}</span><span className="last-updated">{lastRefresh ? `checked ${lastRefresh.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : loading ? "connecting…" : "not checked"}</span></div></div><div className="new-metric-grid">{DATASETS.map((dataset) => <MetricTile key={dataset.key} keyName={dataset.key} payload={payload} onSelect={openFirstRecord} />)}</div></section>
 
-      <section className="chart-grid" id="pulse"><article className="chart-panel pulse-panel"><div className="panel-title-row"><div><span className="panel-kicker">01 / activity pulse</span><h3>What entered the field</h3></div><span className="chart-note">sample-derived / 7 days</span></div><PulseChart payload={payload} focusKey={focusKey} onFocus={setFocusKey} /><p className="chart-disclaimer">The pulse plots dates from the visible source sample. Click a lane above to isolate it; totals below remain the source API&apos;s authoritative count.</p></article><article className="chart-panel coverage-panel"><div className="panel-title-row"><div><span className="panel-kicker">02 / coverage map</span><h3>Five lanes. One view.</h3></div><span className="chart-note">click nodes</span></div><div className="coverage-rings"><span className="ring ring-a" /><span className="ring ring-b" /><span className="ring ring-c" /><span className="coverage-core"><Icon name="dna" size={24} /><b>{numberFormat(totals)}</b><small>records</small></span></div><div className="coverage-legend">{DATASETS.map((dataset) => <button type="button" key={dataset.key} disabled={!itemsFor(payload, dataset.key).length} onClick={() => openFirstRecord(dataset.key)}><i className={`legend-dot ${dataset.color}`} />{dataset.short}<strong>{hasDatasetError(payload, dataset.key) ? "—" : numberFormat(totalFor(payload, dataset.key))}</strong></button>)}</div></article></section>
+       <section className="chart-grid" id="pulse"><article className="chart-panel pulse-panel"><div className="panel-title-row"><div><span className="panel-kicker">01 / activity pulse</span><h3>What entered the field</h3></div><span className="chart-note">latest sample / 7 days</span></div><PulseChart payload={payload} focusKey={focusKey} onFocus={setFocusKey} /><p className="chart-disclaimer">The pulse plots dates from the visible source sample. When a source is historical, its seven-day window is anchored to the latest dated record instead of inventing current activity. Click a lane above to isolate it; totals below remain the source API&apos;s authoritative count.</p></article><article className="chart-panel coverage-panel"><div className="panel-title-row"><div><span className="panel-kicker">02 / coverage map</span><h3>Five lanes. One view.</h3></div><span className="chart-note">click nodes</span></div><div className="coverage-rings"><span className="ring ring-a" /><span className="ring ring-b" /><span className="ring ring-c" /><span className="coverage-core"><Icon name="dna" size={24} /><b>{numberFormat(totals)}</b><small>records</small></span></div><div className="coverage-legend">{DATASETS.map((dataset) => <button type="button" key={dataset.key} disabled={!itemsFor(payload, dataset.key).length} onClick={() => openFirstRecord(dataset.key)}><i className={`legend-dot ${dataset.color}`} />{dataset.short}<strong>{hasDatasetError(payload, dataset.key) ? "—" : numberFormat(totalFor(payload, dataset.key))}</strong></button>)}</div></article></section>
 
       <section className="board-section" id="signals"><div className="section-topline"><div><span className="new-kicker"><i /> Fresh signals</span><h2>New to the board.</h2></div><span className="result-note">{query ? `Results for “${query}”` : `${selectedCancer.label} / latest six`}</span></div><div className="signal-card-grid">{recentSignals.map(({ key, item }) => <SignalCard key={`${key}-${valueOf(item.id, displayTitle(item, key))}`} item={item} keyName={key} onOpen={setSelected} />)}{!recentSignals.length ? <div className="empty-board">No records in this view yet. Try another cancer type or search term.</div> : null}</div></section>
 
