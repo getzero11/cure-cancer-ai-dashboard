@@ -210,11 +210,12 @@ function emptyDataset(): DatasetResult {
 
 function latestRecordDate(payload: DashboardPayload | null, keys: DatasetKey[]) {
   let latest = 0;
+  const now = Date.now();
   keys.forEach((key) => {
     itemsFor(payload, key).forEach((item) => {
       const raw = recordDate(item, key);
       const timestamp = raw ? new Date(raw).getTime() : NaN;
-      if (Number.isFinite(timestamp)) latest = Math.max(latest, timestamp);
+      if (Number.isFinite(timestamp)) latest = Math.max(latest, Math.min(timestamp, now));
     });
   });
   return latest ? new Date(latest) : null;
