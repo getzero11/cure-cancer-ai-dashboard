@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { parseDatasetBody } from "../lib/dashboard-data.mjs";
+import {
+  normalizeClinicalTrialsGovStudy,
+  parseDatasetBody,
+} from "../lib/dashboard-data.mjs";
 
 const liveRegistryShape = {
   data: {
@@ -56,5 +59,33 @@ const documentedListShape = {
 const documented = parseDatasetBody(documentedListShape, "clinicalTrials");
 assert.equal(documented.total, 12);
 assert.equal(documented.items[0].title, "A documented list response");
+
+const registryStudy = normalizeClinicalTrialsGovStudy({
+  protocolSection: {
+    identificationModule: {
+      nctId: "NCT22222222",
+      briefTitle: "A live registry study",
+    },
+    descriptionModule: { briefSummary: "A registry summary." },
+    conditionsModule: {
+      conditions: ["Lung Cancer"],
+      keywords: ["biomarker"],
+    },
+    statusModule: {
+      overallStatus: "RECRUITING",
+      startDateStruct: { date: "2026-01-01" },
+      completionDateStruct: { date: "2028-01-01" },
+    },
+    armsInterventionsModule: {
+      interventions: [{ type: "DRUG" }, { type: "DRUG" }],
+    },
+  },
+});
+
+assert.equal(registryStudy.nctId, "NCT22222222");
+assert.equal(registryStudy.title, "A live registry study");
+assert.equal(registryStudy.status, "RECRUITING");
+assert.equal(registryStudy.interventionType, "DRUG");
+assert.equal(registryStudy.conditions[0], "Lung Cancer");
 
 console.log("Dashboard data test passed: live clinical-trial fields are normalized.");

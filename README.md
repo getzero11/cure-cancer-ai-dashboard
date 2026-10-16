@@ -10,6 +10,7 @@ A responsive oncology signal dashboard built for Vercel and Docker. It reads the
 - Source totals, latest signal rows, clinical-trial watch, approval shelf, refresh health, and API budget status
 - Source links for PubMed, FDA, ClinicalTrials.gov, and Cure Cancer With AI records
 - A clearly marked preview mode when no API key is configured
+- A transparent ClinicalTrials.gov fallback when the authenticated CCWAI clinical-trials lane is empty
 
 The dashboard is informational only and is not medical advice.
 
@@ -66,7 +67,7 @@ Run the single reproducible validation command:
 npm test
 ```
 
-This runs the TypeScript check and a production Next.js build. The build also verifies the standalone output used by Docker. The clinical-trials route accepts the documented `data` response shape and the compatible `items`/nested-items shape, normalizes common registry field names, surfaces source errors in the trial panel, and does not cache partial/error snapshots.
+This runs the TypeScript check and a production Next.js build. The build also verifies the standalone output used by Docker. The clinical-trials route accepts the documented `data` response shape and the compatible `items`/nested-items shape, normalizes common registry field names, falls back to live ClinicalTrials.gov records when CCWAI returns a successful empty trial lane, surfaces source errors in the trial panel, and does not cache partial/error snapshots.
 
 ## Docker
 
@@ -91,7 +92,7 @@ Open <http://localhost:3000>. The Dockerfile uses the pinned Node 24.0.0 runtime
 3. Redeploy after changing the variable. Vercel does not make a newly added server-side variable available to an already-built deployment until it is redeployed.
 4. Open the generated Vercel URL and check `/api/dashboard?cancerType=all` if the board needs troubleshooting.
 
-The browser calls only `/api/dashboard`; the API key remains server-side. A live response has `mode: "live"` and `datasets.clinicalTrials.items`. If the clinical-trials panel reports an error, the panel now shows the upstream failure rather than disguising it as an empty successful result. A deployment without `CCWAI_API_KEY` is expected to show preview records and a preview notice.
+The browser calls only `/api/dashboard`; the API key remains server-side. A live response has `mode: "live"` and `datasets.clinicalTrials.items`. If CCWAI returns no trial rows with a successful response, the route queries the public ClinicalTrials.gov registry and marks the dataset source as `clinicaltrials.gov`; the dashboard displays that fallback state instead of showing a misleading empty record. If the clinical-trials panel reports an error, the panel shows the upstream failure. A deployment without `CCWAI_API_KEY` is expected to show preview records and a preview notice.
 
 The browser refreshes every five minutes. The route uses a short-lived in-memory cache only for complete live snapshots; partial or failed snapshots are retried instead of being cached as empty data.
 

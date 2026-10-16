@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { asNumber, parseDatasetBody } from "@/lib/dashboard-data";
+import {
+  asNumber,
+  normalizeClinicalTrialsGovStudy,
+  parseDatasetBody,
+} from "@/lib/dashboard-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const API_ORIGIN = "https://www.curecancerwithai.com/api/v1";
+const REGISTRY_API_ORIGIN = "https://clinicaltrials.gov/api/v2/studies";
+const REGISTRY_ACTIVE_STATUSES = [
+  "RECRUITING",
+  "NOT_YET_RECRUITING",
+  "ENROLLING_BY_INVITATION",
+  "ACTIVE_NOT_RECRUITING",
+].join("|");
 const CANCER_TYPES = [
   "all",
   "lung",
@@ -36,6 +47,7 @@ interface DatasetResult {
   total: number;
   fetchedAt: string;
   rateLimit?: RateLimit;
+  source?: "curecancerwithai" | "clinicaltrials.gov";
 }
 
 interface DashboardPayload {
@@ -181,6 +193,7 @@ async function fetchDataset(
       total,
       fetchedAt: new Date().toISOString(),
       rateLimit,
+      source: "curecancerwithai",
     };
   } catch (error) {
     if (error instanceof DatasetFetchError) {
@@ -193,6 +206,84 @@ async function fetchDataset(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function buildRegistryQuery(cancerType: CancerType, query: string): string {
+  const params = new URLSearchParams({
+    pageSize: "20",
+    countTotal: "true",
+    format: "json",
+    "filter.overallStatus": REGISTRY_ACTIVE_STATUSES,
+    sort: "LastUpdatePostDate:desc",
+  });
+
+  params.set("query.cond", cancerType === "all" ? "cancer" : `${cancerType} cancer`);
+  if (query) params.set("query.term", query);
+
+  return `${REGISTRY_API_ORIGIN}?${params.toString()}`;
+}
+
+async function fetchClinicalTrialsFallback(
+  cancerType: CancerType,
+  query: string,
+): Promise<DatasetResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+
+  try {
+    const response = await fetch(buildRegistryQuery(cancerType, query), {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new DatasetFetchError(
+        `ClinicalTrials.gov returned HTTP ${response.status}.`,
+        response.status,
+      );
+    }
+
+    const body: unknown = await response.json();
+    const studies =
+      typeof body === "object" && body !== null && "studies" in body && Array.isArray(body.studies)
+        ? body.studies
+        : [];
+    const items = studies
+      .map((study) => normalizeClinicalTrialsGovStudy(study))
+      .filter((study): study is ApiRecord => Boolean(study));
+    const total =
+      typeof body === "object" && body !== null && "totalCount" in body
+        ? asNumber(body.totalCount)
+        : null;
+
+    return {
+      items,
+      total: total ?? items.length,
+      fetchedAt: new Date().toISOString(),
+      source: "clinicaltrials.gov",
+    };
+  } catch (error) {
+    if (error instanceof DatasetFetchError) throw error;
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new DatasetFetchError("ClinicalTrials.gov timed out after 20 seconds.", 504);
+    }
+    throw new DatasetFetchError("ClinicalTrials.gov could not be reached.", 503);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchClinicalTrialsDataset(
+  config: (typeof DATASET_CONFIG)[number],
+  cancerType: CancerType,
+  query: string,
+  apiKey: string,
+): Promise<DatasetResult> {
+  const primary = await fetchDataset(config, cancerType, query, apiKey);
+  if (primary.items.length || primary.total > 0) return primary;
+  return fetchClinicalTrialsFallback(cancerType, query);
 }
 
 function demoDate(daysAgo: number): string {
@@ -363,7 +454,11 @@ export async function GET(request: NextRequest) {
   const rateLimits: RateLimit[] = [];
 
   const responses = await Promise.allSettled(
-    DATASET_CONFIG.map((config) => fetchDataset(config, cancerType, query, apiKey)),
+    DATASET_CONFIG.map((config) =>
+      config.key === "clinicalTrials"
+        ? fetchClinicalTrialsDataset(config, cancerType, query, apiKey)
+        : fetchDataset(config, cancerType, query, apiKey),
+    ),
   );
 
   responses.forEach((response, index) => {
@@ -389,12 +484,17 @@ export async function GET(request: NextRequest) {
   const successfulCount = DATASET_CONFIG.length - Object.keys(errors).length;
   const mode: DashboardPayload["mode"] =
     successfulCount === 0 ? "error" : successfulCount < DATASET_CONFIG.length ? "partial" : "live";
+  const usedClinicalTrialsFallback =
+    datasets.clinicalTrials?.source === "clinicaltrials.gov";
 
   const payload: DashboardPayload = {
     mode,
     cancerType,
     query,
     lastUpdated: new Date().toISOString(),
+    notice: usedClinicalTrialsFallback
+      ? "Cure Cancer With AI returned no clinical-trial records, so live registry records are shown from ClinicalTrials.gov."
+      : undefined,
     rateLimit: {
       remaining: remainingValues.length ? Math.min(...remainingValues) : null,
       limit,
