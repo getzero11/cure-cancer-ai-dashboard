@@ -422,7 +422,7 @@ export default function Home() {
     <main className="dark-board">
       <header className="new-topbar">
         <a href="#top" className="new-brand"><BrandMark /><span><strong>CURE CANCER <em>with AI</em></strong><small>oncology intelligence / live board</small></span></a>
-        <nav className="new-nav" aria-label="Primary navigation"><a className="active" href="#overview">Board</a><a href="#pulse">Pulse</a><a href="#signals">Signals</a><a href="#trial-watch">Trial watch</a></nav>
+        <nav className="new-nav" aria-label="Primary navigation"><a className="active" href="#overview">Board</a><a href="#pulse">Pulse</a><a href="#signals">Signals</a><a href="#trial-watch">Trial watch</a><a href="/demo" className="demo-nav-link">Demo</a></nav>
         <div className="top-actions"><span className="live-chip"><i />{health}</span><button className="icon-button" type="button" onClick={() => void loadDashboard()} aria-label="Refresh dashboard"><Icon name="refresh" size={17} /></button></div>
       </header>
 

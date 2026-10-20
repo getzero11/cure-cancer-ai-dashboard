@@ -676,6 +676,8 @@ body {
 .new-nav a { color: var(--muted); font-size: 14px; font-weight: 600; }
 .new-nav a:hover, .new-nav a.active { color: var(--text); }
 .new-nav a::after { background: var(--mint); }
+.new-nav a.demo-nav-link { color: var(--mint); font-weight: 700; }
+.new-nav a.demo-nav-link::after { background: var(--violet); }
 
 .top-actions { gap: 14px; }
 .live-chip, .source-status { color: var(--mint); font-size: 11px; font-weight: 700; }
