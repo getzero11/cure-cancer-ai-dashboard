@@ -1,5 +1,10 @@
 # Cure Cancer With AI / Observatory
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
+
+
 A responsive oncology signal dashboard built for Vercel and Docker. It reads the Cure Cancer With AI REST API through a server-side Next.js route, so the API key is never sent to the browser.
 
 ## What it displays
